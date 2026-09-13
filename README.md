@@ -190,3 +190,112 @@ It helps teams to:
 A DevOps engineer usually does not receive requirements directly from customers. Requirements pass through different roles and reach the Scrum team. DevOps engineers provide infrastructure, automate processes, and improve the software delivery lifecycle.
 
 
+## — Virtual Machines and Virtualization
+
+### 1. What Is a Server?
+
+A server is a computer system used to host applications so users can access them over a network or the internet.
+
+Examples:
+- Google
+- Amazon
+- Other websites and applications
+
+### 2. The Problem with Physical Servers
+
+Suppose an organization buys a physical server with:
+
+- 100 GB RAM
+- 100 CPU cores
+
+But an application needs only:
+
+- 4 GB RAM
+- 4 CPU cores
+
+Most of the server's resources remain unused. This causes resource wastage and inefficient usage.
+
+### 3. Virtualization
+
+**Virtualization** is the process of dividing one physical server into multiple logical virtual machines.
+
+These virtual machines share the resources of the physical server while working as separate computer systems.
+
+### 4. Hypervisor
+
+A **hypervisor** is software that creates and manages virtual machines on a physical server.
+
+It performs logical separation of the physical server's resources.
+
+Examples of hypervisors:
+- VMware
+- Xen
+
+### 5. Virtual Machine (VM)
+
+A **Virtual Machine** is a logical computer system created inside a physical server.
+
+A VM has:
+- Its own allocated CPU
+- Its own allocated memory
+- Its own storage and operating system
+- Logical isolation from other VMs
+
+Multiple teams can use different VMs on the same physical server without directly interfering with each other.
+
+### 6. Physical Server vs Virtual Machine
+
+| Physical Server | Virtual Machine |
+|---|---|
+| Real hardware | Software-based logical system |
+| Uses physical resources directly | Uses allocated shared resources |
+| Usually supports one main environment | Multiple VMs can run on one server |
+| Resource utilization may be low | Improves resource utilization |
+
+### 7. Virtual Machines in Cloud Platforms
+
+Cloud providers such as AWS, Microsoft Azure, and Google Cloud use physical servers inside data centers.
+
+The general process is:
+
+1. Cloud provider installs physical servers in a data center.
+2. Hypervisors are installed on these physical servers.
+3. A user requests a VM with specific CPU and RAM.
+4. The cloud platform selects a suitable physical server.
+5. The hypervisor creates the VM.
+6. The user receives access details such as an IP address and key.
+
+### 8. AWS Example
+
+In AWS, a virtual machine is commonly called an **EC2 instance**.
+
+A user can select:
+- Region, such as Mumbai or Singapore
+- CPU configuration
+- RAM
+- Storage
+- Operating system
+
+The user gets logical access to the VM but does not physically own or access the underlying server.
+
+### 9. Regions and Latency
+
+A cloud region is a geographical location where cloud data centers are available.
+
+Choosing a region closer to users generally reduces **latency**, which means less delay in communication.
+
+### 10. Benefits of Virtualization
+
+- Better resource utilization
+- Reduced hardware wastage
+- Multiple environments on one physical server
+- Isolation between virtual machines
+- Flexible resource allocation
+- Supports cloud computing
+- Reduces infrastructure cost
+
+### 11. Key Interview Answer
+
+A virtual machine is a software-based computer system created on a physical server using a hypervisor. It has its own allocated CPU, memory, storage, and operating system. Virtualization improves resource utilization by allowing multiple isolated VMs to run on one physical server.
+
+
