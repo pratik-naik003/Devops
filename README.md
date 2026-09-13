@@ -299,3 +299,151 @@ Choosing a region closer to users generally reduces **latency**, which means les
 A virtual machine is a software-based computer system created on a physical server using a hypervisor. It has its own allocated CPU, memory, storage, and operating system. Virtualization improves resource utilization by allowing multiple isolated VMs to run on one physical server.
 
 
+
+## Day 4 — Virtual Machines 
+
+### 1. Creating Virtual Machines
+
+Virtual machines can be created using cloud providers such as AWS, Azure, Google Cloud, and DigitalOcean.
+
+In AWS, a virtual machine is called an **EC2 instance**.
+
+### 2. Manual Creation
+
+A VM can be created through the cloud console:
+
+1. Sign in to the cloud console.
+2. Select the required service.
+3. Choose the operating system.
+4. Select CPU and memory.
+5. Configure authentication.
+6. Launch the instance.
+7. Get the IP address and instance details.
+
+Manual creation is suitable for a few resources but becomes slow and repetitive for many requests.
+
+### 3. Automation
+
+Automation uses scripts or tools to create resources without repeated manual work.
+
+Benefits:
+- Saves time
+- Reduces human errors
+- Creates multiple resources quickly
+- Improves efficiency
+- Provides consistency
+
+### 4. AWS API
+
+AWS provides APIs for its services.
+
+Examples:
+- **EC2 API:** Manage virtual machines.
+- **S3 API:** Manage storage.
+- **EBS API:** Manage volumes.
+
+An API request must be:
+
+- **Valid:** Follows the expected format.
+- **Authenticated:** The user is verified.
+- **Authorized:** The user has permission.
+
+### 5. Methods to Automate AWS
+
+| Method | Purpose |
+|---|---|
+| **AWS CLI** | Manage AWS using terminal commands |
+| **AWS API** | Directly send requests programmatically |
+| **Boto3** | Python SDK for AWS automation |
+| **CloudFormation** | Create infrastructure using templates |
+| **AWS CDK** | Define infrastructure using programming languages |
+| **Terraform** | Automate infrastructure across multiple cloud providers |
+
+### 6. Terraform
+
+Terraform is an **Infrastructure as Code (IaC)** tool.
+
+It is useful when an organization uses:
+- AWS
+- Azure
+- Google Cloud
+- Multiple cloud providers
+- Hybrid-cloud infrastructure
+
+### 7. Hybrid Cloud
+
+A hybrid-cloud model uses infrastructure from multiple cloud platforms or combines cloud and on-premise infrastructure.
+
+Example:
+- AI/ML workloads on Google Cloud
+- Other services or databases on AWS
+
+Terraform is useful because it can manage resources across different platforms.
+
+### 8. AWS CDK
+
+AWS CDK means **Cloud Development Kit**.
+
+It is closely integrated with AWS and allows infrastructure to be written using programming languages.
+
+For an AWS-focused organization, CDK can be a good choice.
+
+### 9. Creating an EC2 Instance
+
+Basic AWS steps:
+
+1. Open AWS Console.
+2. Search for **EC2**.
+3. Click **Launch Instance**.
+4. Enter an instance name.
+5. Select an OS, such as Ubuntu.
+6. Select a free-tier eligible instance.
+7. Create or select a key pair.
+8. Configure required settings.
+9. Click **Launch Instance**.
+10. Wait until the instance is running.
+
+### 10. Key Pair
+
+A key pair is used to securely access an EC2 instance.
+
+- The public key is attached to the instance.
+- The private key is downloaded to the local computer.
+- The private key must be stored safely.
+- Losing it may prevent login access.
+
+### 11. Free Tier
+
+Free-tier instances have limited resources and usage.
+
+Always check:
+- Instance type
+- Free-tier eligibility
+- Storage usage
+- Running resources
+- Billing details
+
+Paid or excessive usage may cause charges.
+
+### 12. Azure VM
+
+The Azure process is similar:
+
+1. Open Azure Portal.
+2. Sign in or create an account.
+3. Select **Virtual Machines**.
+4. Click **Create**.
+5. Choose OS and machine size.
+6. Configure authentication.
+7. Review and create the VM.
+
+### 13. Interview Points
+
+- AWS EC2 is a virtual machine service.
+- VMs can be created manually or through automation.
+- Boto3 is used to automate AWS with Python.
+- CloudFormation creates infrastructure using templates.
+- AWS CDK defines AWS infrastructure using programming languages.
+- Terraform is useful for multi-cloud and hybrid-cloud infrastructure.
+- Automation improves speed, consistency, and efficiency.
+
