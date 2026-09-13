@@ -116,3 +116,77 @@ A DevOps engineer primarily focuses on automating and improving:
 
 ## Interview Answer
 > SDLC is a standard process used to plan, design, develop, test, and deploy high-quality software. As a DevOps engineer, I primarily focus on automating the build, testing, and deployment phases to improve delivery efficiency.
+
+
+
+## Day 3 — Organization Roles, SDLC and Jira
+
+### 1. Requirement Flow
+
+Customers → Business Analyst → Product Manager → Product Owner → Solutions Architect → Scrum Team
+
+### 2. Important Roles
+
+- **Customer:** Gives feedback and requirements.
+- **Business Analyst (BA):** Collects requirements and prepares the BRD.
+- **Product Manager (PM):** Defines product vision and prioritizes requirements.
+- **Product Owner (PO):** Converts requirements into epics and stories; manages the backlog.
+- **Solutions Architect (SA):** Creates the technical design using HLD and LLD.
+- **Developers:** Write and implement application code.
+- **DevOps Engineer:** Provides infrastructure, tools, automation, and CI/CD pipelines.
+- **QA/QE Engineer:** Tests application quality and correctness.
+- **DBA:** Manages databases.
+- **SRE:** Maintains reliability, availability, monitoring, dashboards, and alerts.
+- **Technical Writer:** Documents features and technical information.
+
+### 3. Scrum Team
+
+A Scrum team can include developers, DevOps engineers, QA engineers, database administrators, and technical writers. They work together to complete requirements.
+
+### 4. SDLC Phases
+
+1. **Planning:** Gather requirements.
+2. **Analysis:** Check feasibility and priority.
+3. **Design:** Prepare HLD and LLD.
+4. **Implementation:** Developers, DevOps, and QA work together.
+5. **Testing and Integration:** Test and integrate the application.
+6. **Maintenance:** Maintain reliability and availability.
+
+### 5. DevOps Engineer's Role
+
+- Create infrastructure and required tools.
+- Automate manual processes.
+- Build CI/CD pipelines.
+- Integrate automated testing.
+- Add security to pipelines.
+- Identify SDLC gaps.
+- Improve delivery speed and efficiency.
+
+### 6. Jira
+
+**Jira** is a project-management and task-tracking tool.
+
+It helps teams to:
+
+- Create epics, stories, and tasks.
+- Assign work to team members.
+- Track task progress.
+- Update daily status.
+- Identify blocked tasks.
+- Help management monitor projects.
+
+### 7. Jira Terms
+
+- **Epic:** A large feature or requirement.
+- **Story:** A smaller task under an epic.
+- **Backlog:** List of pending work.
+- **Sprint:** Planned work for usually 2–3 weeks.
+- **Sprint Planning:** Meeting to plan sprint tasks.
+- **Sprint Retrospective:** Meeting to review completed and remaining work.
+- **Task Flow:** To Do → In Progress → In Review → Done.
+
+### 8. Key Interview Point
+
+A DevOps engineer usually does not receive requirements directly from customers. Requirements pass through different roles and reach the Scrum team. DevOps engineers provide infrastructure, automate processes, and improve the software delivery lifecycle.
+
+
