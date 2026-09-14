@@ -1566,3 +1566,1666 @@ This lesson covered the fundamentals of Linux and shell usage:
 - Commands such as `free`, `nproc`, `df`, and `top` help monitor server resources.
 - Shell scripting combines commands into reusable automation workflows.
 
+
+# DevOps Day 7: AWS Resource Tracker Using Bash, AWS CLI, Cron, and jq
+
+## 1. Overview
+
+This lesson introduces a practical shell scripting project commonly used by DevOps engineers working with cloud infrastructure.
+
+The project is an **AWS Resource Tracker**. Its purpose is to collect information about AWS resources and generate a readable report that can be shared with a manager, team, or reporting system.
+
+The script uses:
+
+- **Bash** for scripting
+- **AWS CLI** for communicating with AWS
+- **Linux commands** for execution and output handling
+- **jq** for extracting useful information from JSON
+- **Cron jobs** for scheduling the script automatically
+
+The resources tracked in this project are:
+
+1. Amazon S3 buckets
+2. Amazon EC2 instances
+3. AWS Lambda functions
+4. IAM users
+
+> This is a basic version of a resource-tracking project. In real organizations, similar information is often sent to dashboards, monitoring systems, cost-management tools, or reporting platforms.
+
+---
+
+## 2. Why Organizations Move to Cloud Infrastructure
+
+Organizations commonly move from physical infrastructure to cloud providers such as AWS or Azure for several reasons.
+
+### 2.1 Manageability
+
+In a traditional data center, an organization must manage its own infrastructure.
+
+This can include:
+
+- Purchasing physical servers
+- Setting up a data center
+- Installing operating systems
+- Managing networking equipment
+- Applying security patches
+- Replacing failed hardware
+- Monitoring server health
+- Upgrading hardware
+- Managing cooling and electricity
+- Maintaining dedicated infrastructure teams
+
+This creates significant **maintenance overhead**.
+
+Cloud providers manage much of the underlying infrastructure, allowing organizations to focus more on applications and business requirements.
+
+For example, instead of purchasing a physical server, a company can create an EC2 instance through AWS.
+
+### 2.2 Cost Effectiveness
+
+Cloud providers generally follow a **pay-as-you-go** model.
+
+This means the organization pays based on the resources it uses and the billing model of the selected service.
+
+In physical infrastructure:
+
+- Hardware must be purchased in advance.
+- The company pays for the infrastructure even when it is underutilized.
+- Hardware may remain idle for long periods.
+
+In cloud infrastructure:
+
+- Resources can be created when needed.
+- Resources can be stopped or deleted when no longer required.
+- Capacity can be adjusted based on demand.
+- Organizations can avoid some large upfront infrastructure costs.
+
+However, cloud does not automatically mean low cost. Unused cloud resources can continue generating charges.
+
+---
+
+## 3. Why Cloud Resource Tracking Is Important
+
+Suppose a company named `example.com` has 100 developers, and all developers have access to AWS.
+
+Each developer may create resources such as:
+
+- EC2 instances
+- EBS volumes
+- S3 buckets
+- Lambda functions
+- Databases
+- Load balancers
+- Elastic IP addresses
+- Snapshots
+
+Over time, some resources may become unused.
+
+### Example: Unused EC2 Instances
+
+A developer may create 100 EC2 instances for testing, but nobody may be using them anymore.
+
+If these instances remain active, they may continue generating costs.
+
+### Example: Unused EBS Volumes
+
+A developer may create an EBS volume and later terminate the EC2 instance associated with it.
+
+The EBS volume may remain available even though no EC2 instance is using it.
+
+AWS does not automatically assume that an unused volume should be deleted. The volume may continue to incur charges.
+
+### DevOps Responsibility
+
+One responsibility of a DevOps engineer or AWS administrator is to help maintain cloud cost effectiveness.
+
+This includes:
+
+- Tracking resource usage
+- Identifying unused resources
+- Monitoring active infrastructure
+- Reviewing resource ownership
+- Reporting resource counts
+- Supporting cost optimization
+- Removing resources only after proper approval
+
+> Resource tracking is not the same as automatically deleting resources. Deletion should be handled carefully because a resource that appears unused may still be required.
+
+---
+
+## 4. Project Objective
+
+The objective is to create a Bash script that collects information about AWS resources and writes the information into a report.
+
+The report may include:
+
+- List of S3 buckets
+- List of EC2 instances
+- List of Lambda functions
+- List of IAM users
+
+The report can be:
+
+- Printed in the terminal
+- Redirected to a file
+- Shared with a manager
+- Used by another reporting system
+- Integrated with a dashboard
+- Generated automatically at a fixed time every day
+
+For this learning project, the report is treated as information that can be given to a manager.
+
+In a real-world implementation, the output would commonly be sent to a dashboard, monitoring system, email workflow, or centralized reporting platform.
+
+---
+
+## 5. High-Level Project Workflow
+
+```text
+Bash Script
+    |
+    v
+AWS CLI Commands
+    |
+    v
+AWS Account
+    |
+    v
+Resource Information
+    |
+    v
+jq / Output Formatting
+    |
+    v
+Report File
+    |
+    v
+Manager / Dashboard / Reporting System
+```
+
+The script communicates with AWS using AWS CLI commands. AWS returns information, often in JSON format. The script then displays or filters the information and stores it in a report.
+
+---
+
+## 6. Why Bash Is Used
+
+Bash is a popular shell and scripting language on Linux systems.
+
+It is useful for DevOps because it can:
+
+- Execute Linux commands
+- Run AWS CLI commands
+- Store command output in variables
+- Redirect output to files
+- Connect commands using pipes
+- Use conditions and loops
+- Automate repetitive tasks
+- Work well with cron
+- Integrate with other command-line tools
+
+Although the same project could be implemented using Python, Boto3, AWS Lambda, or another automation method, Bash is useful because DevOps engineers frequently work with Linux servers and command-line tools.
+
+### Other Possible Implementation Options
+
+The same resource-tracking requirement could be implemented using:
+
+- Bash shell scripting
+- Python with Boto3
+- AWS Lambda with Python
+- AWS SDKs
+- AWS CDK
+- Terraform data sources
+- CloudFormation-related automation
+- Monitoring or cost-management platforms
+
+The important point is to achieve the required operational goal. The programming language is selected based on the team's skills, maintainability requirements, and infrastructure design.
+
+---
+
+## 7. Project Prerequisites
+
+### 7.1 Linux or Linux-Compatible Environment
+
+The script is designed to run on Linux.
+
+Possible environments include:
+
+- An AWS EC2 Linux instance
+- Ubuntu
+- Amazon Linux
+- A local Linux machine
+- macOS terminal
+- Windows with WSL or another Linux-compatible environment
+
+### 7.2 Bash
+
+Check the Bash version:
+
+```bash
+bash --version
+```
+
+### 7.3 AWS CLI
+
+Check whether AWS CLI is installed:
+
+```bash
+aws --version
+```
+
+### 7.4 AWS Credentials
+
+Configure AWS CLI using:
+
+```bash
+aws configure
+```
+
+The command generally asks for:
+
+1. AWS Access Key ID
+2. AWS Secret Access Key
+3. Default AWS Region
+4. Default output format
+
+Example:
+
+```text
+AWS Access Key ID: <your-access-key>
+AWS Secret Access Key: <your-secret-key>
+Default region name: ap-south-1
+Default output format: json
+```
+
+Use the region appropriate for your AWS resources.
+
+### Important Security Note
+
+Do not:
+
+- Hardcode access keys inside scripts
+- Upload access keys to GitHub
+- Share secret keys publicly
+- Put credentials in screenshots
+- Commit AWS credential files into repositories
+
+For EC2 instances, an IAM role attached to the instance is generally preferable to storing long-term access keys on the server.
+
+### 7.5 jq
+
+Check whether jq is installed:
+
+```bash
+jq --version
+```
+
+For Ubuntu/Debian-based systems:
+
+```bash
+sudo apt update
+sudo apt install jq
+```
+
+---
+
+## 8. AWS CLI Authentication
+
+AWS CLI needs to authenticate with AWS before it can retrieve resource information.
+
+Authentication answers:
+
+> Who is making the request?
+
+Authorization answers:
+
+> What is this identity allowed to do?
+
+The configured identity must have permission to call the required AWS APIs.
+
+For this project, permissions may be needed for actions such as:
+
+- Listing S3 buckets
+- Describing EC2 instances
+- Listing Lambda functions
+- Listing IAM users
+
+A command may fail if:
+
+- Credentials are missing
+- Credentials are incorrect
+- The region is incorrect
+- The IAM identity lacks permission
+- The AWS CLI is not installed
+- The account or resource does not contain the requested resources
+
+---
+
+## 9. Creating the Script File
+
+The script is named:
+
+```text
+aws_resource_tracker.sh
+```
+
+Create the file:
+
+```bash
+touch aws_resource_tracker.sh
+```
+
+Open it in Vim:
+
+```bash
+vim aws_resource_tracker.sh
+```
+
+Alternatively:
+
+```bash
+nano aws_resource_tracker.sh
+```
+
+---
+
+## 10. Shebang
+
+The first line of the script should identify the interpreter:
+
+```bash
+#!/bin/bash
+```
+
+This line is called the **shebang**.
+
+- `#!` tells the operating system that the file should be executed using an interpreter.
+- `/bin/bash` specifies Bash as the interpreter.
+
+### Why Not Always Use `/bin/sh`?
+
+A common alternative is:
+
+```bash
+#!/bin/sh
+```
+
+However, `/bin/sh` may be a symbolic link to different shells depending on the Linux distribution. It may point to Bash, Dash, or another POSIX-compatible shell.
+
+Bash and Dash have syntax and feature differences. A script written using Bash-specific features may fail if executed with Dash.
+
+Therefore, if the script is written specifically for Bash, use:
+
+```bash
+#!/bin/bash
+```
+
+---
+
+## 11. Script Documentation and Comments
+
+A script should explain its purpose and ownership.
+
+Example:
+
+```bash
+#!/bin/bash
+
+# Author: Abhishek
+# Date: 11-Jan
+# Version: v1
+# Description: This script reports AWS resource usage.
+```
+
+### Why Add a Header?
+
+A script header helps future users understand:
+
+- Who created the script
+- When it was created
+- What the script does
+- Which version they are using
+- Who they can contact for clarification
+
+This is useful when a script is maintained by multiple engineers, stored in Git, shared across teams, or being troubleshot.
+
+In professional projects, version tracking is usually handled through Git, but a short version or change description can still be useful.
+
+---
+
+## 12. Resources Tracked by the Script
+
+The project tracks four AWS resource categories.
+
+### 12.1 Amazon S3
+
+Amazon S3 is an object storage service. An S3 bucket is a container used to store objects such as files, images, logs, backups, application artifacts, and data files.
+
+### 12.2 Amazon EC2
+
+Amazon EC2 provides virtual servers in the cloud. EC2 instances may run web applications, APIs, databases, build servers, monitoring tools, DevOps tools, and development environments.
+
+### 12.3 AWS Lambda
+
+AWS Lambda is a serverless compute service. Lambda functions execute code in response to events or requests without requiring users to manage traditional servers.
+
+### 12.4 IAM Users
+
+AWS Identity and Access Management (IAM) controls access to AWS resources. An IAM user represents an identity in an AWS account.
+
+The script lists IAM users. IAM users are account-level identities, while some other AWS resources are region-specific.
+
+---
+
+## 13. AWS CLI Command Reference
+
+The official AWS CLI documentation should be used whenever the exact command is unknown.
+
+Documentation helps identify:
+
+- Service names
+- Available operations
+- Required parameters
+- Optional parameters
+- Output formats
+- Examples
+- Permissions
+- Pagination behavior
+
+Instead of memorizing every command, learn how to search the documentation and understand the command structure.
+
+---
+
+## 14. AWS CLI Command: List S3 Buckets
+
+Command:
+
+```bash
+aws s3 ls
+```
+
+### Explanation
+
+- `aws` is the AWS CLI executable.
+- `s3` identifies the Amazon S3 service.
+- `ls` means list.
+
+This command lists S3 buckets accessible to the configured AWS identity.
+
+Example output:
+
+```text
+2026-09-14 10:00:00 example-bucket
+2026-09-14 10:05:00 project-logs
+```
+
+Script usage:
+
+```bash
+echo "List of S3 buckets"
+aws s3 ls
+```
+
+---
+
+## 15. AWS CLI Command: Describe EC2 Instances
+
+Command:
+
+```bash
+aws ec2 describe-instances
+```
+
+This command retrieves detailed information about EC2 instances.
+
+The response may include:
+
+- Instance ID
+- Instance type
+- Image ID
+- State
+- Private IP address
+- Public IP address
+- Availability Zone
+- Security groups
+- Subnet ID
+- VPC ID
+- Tags
+- Block device mappings
+
+The response is usually large and nested JSON. A manager may not need every field, so jq can be used to extract only instance IDs.
+
+---
+
+## 16. AWS CLI Command: List Lambda Functions
+
+Command:
+
+```bash
+aws lambda list-functions
+```
+
+This retrieves Lambda functions available in the selected AWS region.
+
+The response may contain:
+
+- Function name
+- Function ARN
+- Runtime
+- Handler
+- Memory size
+- Timeout
+- Last modified time
+- Role
+- Code size
+
+Example:
+
+```bash
+echo "List of Lambda functions"
+aws lambda list-functions
+```
+
+---
+
+## 17. AWS CLI Command: List IAM Users
+
+Command:
+
+```bash
+aws iam list-users
+```
+
+This retrieves IAM users in the AWS account.
+
+The response may include:
+
+- User name
+- User ID
+- ARN
+- Creation date
+- Password last-used information, where available
+
+Example:
+
+```bash
+echo "List of IAM users"
+aws iam list-users
+```
+
+---
+
+## 18. Initial Script Structure
+
+A basic version of the script may look like this:
+
+```bash
+#!/bin/bash
+
+# Author: Abhishek
+# Date: 11-Jan
+# Version: v1
+# Description: This script reports AWS resource usage.
+
+# List S3 buckets
+aws s3 ls
+
+# List EC2 instances
+aws ec2 describe-instances
+
+# List Lambda functions
+aws lambda list-functions
+
+# List IAM users
+aws iam list-users
+```
+
+This version works as a starting point, but its output is not very readable because:
+
+- There are no section headings.
+- EC2 output is very large.
+- The user cannot easily identify which output belongs to which service.
+- The output is not yet formatted as a report.
+
+---
+
+## 19. Making the Script Executable
+
+Add execute permission:
+
+```bash
+chmod +x aws_resource_tracker.sh
+```
+
+Execute the script:
+
+```bash
+./aws_resource_tracker.sh
+```
+
+### Meaning
+
+- `chmod` changes file permissions.
+- `+x` adds execute permission.
+- `./` means execute the file from the current directory.
+
+### About chmod 777
+
+The lecture temporarily uses:
+
+```bash
+chmod 777 aws_resource_tracker.sh
+```
+
+However, `777` is generally not recommended. It grants read, write, and execute permissions to the owner, group, and others.
+
+Safer options may include:
+
+```bash
+chmod 700 aws_resource_tracker.sh
+```
+
+or:
+
+```bash
+chmod 750 aws_resource_tracker.sh
+```
+
+The correct permission depends on the operational requirement.
+
+---
+
+## 20. Why Print Statements Are Important
+
+When multiple commands run one after another, their output can become confusing.
+
+Use `echo` to print descriptive headings.
+
+Example:
+
+```bash
+echo "========== S3 Buckets =========="
+aws s3 ls
+
+echo "========== EC2 Instances =========="
+aws ec2 describe-instances
+
+echo "========== Lambda Functions =========="
+aws lambda list-functions
+
+echo "========== IAM Users =========="
+aws iam list-users
+```
+
+Print statements improve:
+
+- Readability
+- Debugging
+- User experience
+- Report organization
+- Troubleshooting
+- Log interpretation
+
+Comments explain the code to someone reading the script, while `echo` statements provide information while the script is running.
+
+---
+
+## 21. Bash Debug Mode
+
+### 21.1 set -x
+
+```bash
+set -x
+```
+
+This enables execution tracing. Bash prints commands before executing them.
+
+Example:
+
+```bash
+#!/bin/bash
+
+set -x
+
+echo "Listing S3 buckets"
+aws s3 ls
+```
+
+This helps identify:
+
+- Which command is running
+- The order of execution
+- Whether variables are expanded correctly
+- Where a script begins to fail
+
+### 21.2 set +x
+
+```bash
+set +x
+```
+
+This disables execution tracing.
+
+Example:
+
+```bash
+set -x
+echo "Debugging enabled"
+aws s3 ls
+set +x
+echo "Debugging disabled"
+```
+
+### Security Warning
+
+Debug mode can expose sensitive information in logs or terminal output. Avoid enabling tracing around commands that print passwords, tokens, secret keys, or sensitive environment variables.
+
+---
+
+## 22. set -e and Error Handling
+
+The lecture also mentions:
+
+```bash
+set -e
+```
+
+This generally causes the script to exit when a command returns a non-zero status, subject to Bash's error-handling rules and context.
+
+It can help prevent a script from continuing after an important command fails.
+
+Example:
+
+```bash
+#!/bin/bash
+
+set -e
+
+echo "Starting script"
+aws s3 ls
+echo "The previous command completed"
+```
+
+In production scripts, error handling should be designed carefully because Bash has special cases around `set -e`.
+
+A commonly seen combination is:
+
+```bash
+set -euo pipefail
+```
+
+These options should be used only after understanding their behavior.
+
+---
+
+## 23. Understanding jq
+
+### 23.1 What Is jq?
+
+`jq` is a command-line JSON processor.
+
+It is used to:
+
+- Read JSON
+- Filter JSON
+- Extract fields
+- Transform JSON
+- Format JSON
+- Select values from nested structures
+- Convert complex API responses into readable output
+
+AWS CLI frequently returns JSON, so jq is highly useful for DevOps engineers.
+
+### 23.2 Why jq Is Needed
+
+The command:
+
+```bash
+aws ec2 describe-instances
+```
+
+may return a large JSON response. The report may only require instance IDs.
+
+Instead of displaying the complete response, jq can extract the required field.
+
+### 23.3 Pipe Operator
+
+The pipe symbol is:
+
+```bash
+|
+```
+
+It sends the output of one command as input to another command.
+
+General structure:
+
+```bash
+command1 | command2
+```
+
+Example:
+
+```bash
+aws ec2 describe-instances | jq
+```
+
+Here:
+
+1. AWS CLI produces JSON.
+2. The pipe sends the JSON to jq.
+3. jq processes the JSON.
+
+---
+
+## 24. Extracting EC2 Instance IDs with jq
+
+An EC2 response generally contains a nested structure similar to:
+
+```json
+{
+  "Reservations": [
+    {
+      "Instances": [
+        {
+          "InstanceId": "i-0123456789abcdef0"
+        }
+      ]
+    }
+  ]
+}
+```
+
+To extract instance IDs:
+
+```bash
+aws ec2 describe-instances | jq -r '.Reservations[].Instances[].InstanceId'
+```
+
+### Explanation of the jq Expression
+
+```text
+.Reservations[].Instances[].InstanceId
+```
+
+- `.Reservations` accesses the `Reservations` field.
+- The first `[]` iterates through the reservations array.
+- `.Instances` accesses the instances field inside each reservation.
+- The second `[]` iterates through the instances array.
+- `.InstanceId` extracts the instance ID.
+
+### Example Output
+
+```text
+i-0123456789abcdef0
+i-0abcdef1234567890
+```
+
+The `-r` option means **raw output**, so the IDs are printed without JSON quotation marks.
+
+---
+
+## 25. Arrays and jq Brackets
+
+If a field contains a single object, it can be accessed directly.
+
+Example:
+
+```json
+{
+  "user": {
+    "name": "Alex"
+  }
+}
+```
+
+Command:
+
+```bash
+jq '.user.name'
+```
+
+For an array:
+
+```json
+{
+  "users": [
+    {"name": "Alex"},
+    {"name": "Sam"}
+  ]
+}
+```
+
+Command:
+
+```bash
+jq '.users[].name'
+```
+
+The `[]` tells jq to process each element in the array.
+
+---
+
+## 26. jq and yq
+
+| Tool | Purpose |
+|---|---|
+| `jq` | Parse and process JSON |
+| `yq` | Parse and process YAML |
+
+DevOps engineers frequently work with JSON and YAML in:
+
+- Cloud API responses
+- Kubernetes manifests
+- CI/CD pipelines
+- Infrastructure-as-code files
+- Application configuration
+- Cloud service configuration
+
+Therefore, familiarity with both tools is useful.
+
+---
+
+## 27. Improved Script with Readable Output
+
+```bash
+#!/bin/bash
+
+# Author: Abhishek
+# Date: 11-Jan
+# Version: v1
+# Description: This script reports AWS resource usage.
+
+echo "========== List of S3 Buckets =========="
+aws s3 ls
+
+echo "========== List of EC2 Instance IDs =========="
+aws ec2 describe-instances | jq -r '.Reservations[].Instances[].InstanceId'
+
+echo "========== List of Lambda Functions =========="
+aws lambda list-functions
+
+echo "========== List of IAM Users =========="
+aws iam list-users
+```
+
+This version is easier to read because:
+
+- Each resource category has a heading.
+- EC2 output is filtered.
+- The report is organized into sections.
+- The manager can understand the output more easily.
+
+---
+
+## 28. Region Considerations
+
+Many AWS services are region-specific.
+
+For example:
+
+- EC2 instances are associated with a region.
+- Lambda functions are generally regional.
+- S3 operations have global and region-related behavior.
+- IAM users are account-level identities.
+
+If the AWS CLI default region is incorrect, commands may show no resources even though resources exist in another region.
+
+Specify a region explicitly:
+
+```bash
+aws ec2 describe-instances --region ap-south-1
+```
+
+Or configure the default region:
+
+```bash
+aws configure
+```
+
+A production resource tracker may need to:
+
+- Track only one region
+- Loop through multiple regions
+- Produce a separate report for each region
+- Aggregate regional results into one report
+
+The lecture focuses on a simple version rather than multi-region reporting.
+
+---
+
+## 29. Redirecting Output to a File
+
+### 29.1 Overwrite a File with >
+
+```bash
+./aws_resource_tracker.sh > resource_tracker.txt
+```
+
+The `>` operator redirects standard output into a file. If the file exists, its previous content is overwritten.
+
+### 29.2 Append to a File with >>
+
+```bash
+./aws_resource_tracker.sh >> resource_tracker.txt
+```
+
+The `>>` operator appends output to the end of the file.
+
+### 29.3 View the Report
+
+```bash
+cat resource_tracker.txt
+```
+
+or:
+
+```bash
+less resource_tracker.txt
+```
+
+| Operator | Behavior |
+|---|---|
+| `>` | Creates or overwrites a file |
+| `>>` | Creates or appends to a file |
+
+---
+
+## 30. Standard Output and Standard Error
+
+A script may produce:
+
+- Standard output: normal command results
+- Standard error: error messages
+
+Redirect standard output:
+
+```bash
+./aws_resource_tracker.sh > resource_tracker.txt
+```
+
+Redirect standard error:
+
+```bash
+./aws_resource_tracker.sh 2> errors.txt
+```
+
+Redirect both output and errors:
+
+```bash
+./aws_resource_tracker.sh > resource_tracker.txt 2>&1
+```
+
+This is useful for scheduled jobs because errors should be captured and reviewed.
+
+---
+
+## 31. Cron Jobs
+
+### 31.1 What Is Cron?
+
+Cron is a Linux-based job scheduling mechanism.
+
+A cron job allows a command or script to run automatically at a specified time or interval.
+
+A script can be scheduled to run:
+
+- Every minute
+- Every hour
+- Every day
+- Every week
+- On a specific day
+- At a specific time
+
+### 31.2 Why Cron Is Useful
+
+Suppose a manager needs an AWS resource report every day at 6 PM.
+
+Manually running the script is unreliable because:
+
+- The engineer may be unavailable.
+- The engineer may forget.
+- The engineer may not be able to log in.
+- The report may be delayed.
+- Manual execution is repetitive.
+
+Cron automates this process.
+
+The Linux system runs the script at the scheduled time without requiring the engineer to execute it manually.
+
+---
+
+## 32. Cron Analogy
+
+A creator may upload a video earlier and configure a platform to publish it at a specific time. The creator does not need to log in exactly at the publishing time.
+
+Cron works similarly:
+
+1. The script is prepared in advance.
+2. A schedule is configured.
+3. The Linux scheduler waits for the specified time.
+4. The script is executed automatically.
+
+---
+
+## 33. Cron Syntax
+
+Cron entries generally contain five time fields followed by the command.
+
+```text
+* * * * * command
+│ │ │ │ │
+│ │ │ │ └── Day of week
+│ │ │ └──── Month
+│ │ └────── Day of month
+│ └──────── Hour
+└────────── Minute
+```
+
+The five fields are:
+
+1. Minute: `0–59`
+2. Hour: `0–23`
+3. Day of month: `1–31`
+4. Month: `1–12`
+5. Day of week: commonly `0–7`
+
+### Example: Every Day at 6 PM
+
+```cron
+0 18 * * * /path/to/aws_resource_tracker.sh
+```
+
+### Example: Every Day at 7 AM
+
+```cron
+0 7 * * * /path/to/aws_resource_tracker.sh
+```
+
+### Example: Every Five Minutes
+
+```cron
+*/5 * * * * /path/to/aws_resource_tracker.sh
+```
+
+---
+
+## 34. Editing the Crontab
+
+Edit the current user's cron schedule:
+
+```bash
+crontab -e
+```
+
+Add an entry such as:
+
+```cron
+0 18 * * * /home/ubuntu/aws_resource_tracker.sh > /home/ubuntu/resource_tracker.txt 2>&1
+```
+
+This runs the script every day at 6 PM and writes the output to a report file.
+
+### Use Absolute Paths
+
+Cron jobs should generally use absolute paths because cron may run with a limited environment and a different working directory.
+
+Prefer:
+
+```cron
+/home/ubuntu/aws_resource_tracker.sh
+```
+
+instead of:
+
+```cron
+./aws_resource_tracker.sh
+```
+
+---
+
+## 35. Cron Permissions and Environment
+
+When a script works manually but fails under cron, common causes include:
+
+- Incorrect file path
+- Missing execute permission
+- Different `PATH` environment variable
+- Missing AWS credentials
+- Missing AWS region
+- Missing jq path
+- Incorrect working directory
+- Permission problems
+- Output file permission issues
+
+To make cron execution reliable:
+
+- Use absolute paths.
+- Use a correct shebang.
+- Ensure the script is executable.
+- Confirm AWS authentication works for the cron user.
+- Use explicit region settings when necessary.
+- Redirect output and errors to a log file.
+- Test the script manually before scheduling it.
+
+---
+
+## 36. Example Report-Generating Script
+
+```bash
+#!/bin/bash
+
+# Author: DevOps Team
+# Version: 1.0
+# Description: Reports selected AWS resources.
+
+REPORT_FILE="/tmp/aws_resource_tracker.txt"
+
+echo "========================================" > "$REPORT_FILE"
+echo "AWS Resource Tracker Report" >> "$REPORT_FILE"
+echo "Generated at: $(date)" >> "$REPORT_FILE"
+echo "========================================" >> "$REPORT_FILE"
+
+echo "" >> "$REPORT_FILE"
+echo "========== S3 Buckets ==========" >> "$REPORT_FILE"
+aws s3 ls >> "$REPORT_FILE" 2>&1
+
+echo "" >> "$REPORT_FILE"
+echo "========== EC2 Instance IDs ==========" >> "$REPORT_FILE"
+aws ec2 describe-instances   | jq -r '.Reservations[].Instances[].InstanceId' >> "$REPORT_FILE" 2>&1
+
+echo "" >> "$REPORT_FILE"
+echo "========== Lambda Functions ==========" >> "$REPORT_FILE"
+aws lambda list-functions >> "$REPORT_FILE" 2>&1
+
+echo "" >> "$REPORT_FILE"
+echo "========== IAM Users ==========" >> "$REPORT_FILE"
+aws iam list-users >> "$REPORT_FILE" 2>&1
+
+echo "Report generated at $REPORT_FILE"
+```
+
+This is an educational example. A production implementation should improve error handling, credential management, region handling, pagination, logging, file rotation, security, and report formatting.
+
+---
+
+## 37. Possible Improvements
+
+### 37.1 Track More Resources
+
+Additional resources may include:
+
+- EBS volumes
+- Elastic IP addresses
+- RDS databases
+- Load balancers
+- Auto Scaling groups
+- ECR repositories
+- CloudWatch alarms
+- NAT gateways
+- Snapshots
+- VPCs
+- Security groups
+
+### 37.2 Detect Unused Resources
+
+The script can be enhanced to identify:
+
+- Stopped EC2 instances
+- Unattached EBS volumes
+- Unused Elastic IP addresses
+- Old snapshots
+- Empty or stale S3 buckets
+- Lambda functions that have not been invoked recently
+
+These checks must be designed carefully because “unused” depends on business context.
+
+### 37.3 Add Resource Tags
+
+Tags can identify:
+
+- Owner
+- Team
+- Environment
+- Application
+- Cost center
+- Project
+- Department
+
+Example:
+
+```text
+Environment=dev
+Owner=platform-team
+Application=payment-service
+```
+
+### 37.4 Generate Different Report Formats
+
+The script can generate:
+
+- CSV
+- JSON
+- HTML
+- Markdown
+- Email-friendly reports
+
+### 37.5 Send Reports Automatically
+
+The report can be integrated with:
+
+- Email
+- Slack
+- Microsoft Teams
+- Amazon SNS
+- S3
+- Dashboards
+- Monitoring systems
+
+### 37.6 Use AWS Lambda and EventBridge
+
+Instead of using cron on an EC2 instance, the process can be implemented using AWS Lambda and Amazon EventBridge Scheduler.
+
+This can reduce the need to maintain a server only for scheduling.
+
+---
+
+## 38. Bash Functions and Modularity
+
+The initial lesson intentionally avoids shell functions to keep the script simple.
+
+In larger projects, functions separate responsibilities.
+
+Example:
+
+```bash
+list_s3_buckets() {
+    aws s3 ls
+}
+
+list_ec2_instances() {
+    aws ec2 describe-instances       | jq -r '.Reservations[].Instances[].InstanceId'
+}
+
+list_lambda_functions() {
+    aws lambda list-functions
+}
+
+list_iam_users() {
+    aws iam list-users
+}
+```
+
+Functions improve:
+
+- Reusability
+- Readability
+- Testing
+- Maintenance
+- Modularity
+
+For beginners, a linear script may be easier to understand. As the project grows, functions become more valuable.
+
+---
+
+## 39. Common Errors and Troubleshooting
+
+### Error: aws: command not found
+
+Possible causes:
+
+- AWS CLI is not installed.
+- AWS CLI is not in the `PATH`.
+
+Check:
+
+```bash
+aws --version
+```
+
+### Error: Unable to locate credentials
+
+Possible causes:
+
+- AWS CLI is not configured.
+- Credentials are unavailable.
+- The script runs under a different user.
+
+Try:
+
+```bash
+aws configure
+```
+
+For EC2, verify that the instance has an appropriate IAM role.
+
+### Error: AccessDenied
+
+Possible cause:
+
+- The IAM user or role lacks permission.
+
+Review the required IAM permissions.
+
+### Error: jq: command not found
+
+Possible cause:
+
+- jq is not installed.
+
+Check:
+
+```bash
+jq --version
+```
+
+### Error: Permission denied
+
+Possible cause:
+
+- The script does not have execute permission.
+
+Try:
+
+```bash
+chmod +x aws_resource_tracker.sh
+```
+
+### Script Works Manually but Not Through Cron
+
+Check:
+
+- Absolute script path
+- Absolute output path
+- AWS credentials
+- Region
+- PATH
+- File permissions
+- Cron logs
+- User executing the cron job
+
+---
+
+## 40. Important Security Practices
+
+When automating AWS resources:
+
+1. Use IAM roles where possible.
+2. Follow the principle of least privilege.
+3. Do not use the root account for automation.
+4. Never hardcode secrets in scripts.
+5. Do not commit credentials to Git.
+6. Avoid `chmod 777` unless there is a specific, justified requirement.
+7. Protect report files if they contain sensitive infrastructure details.
+8. Avoid exposing secrets when using `set -x`.
+9. Rotate credentials according to organizational policy.
+10. Review scripts before allowing destructive operations.
+
+---
+
+## 41. Assignment
+
+The assignment is:
+
+1. Create an AWS resource tracker shell script.
+2. Track:
+   - S3 buckets
+   - EC2 instances
+   - Lambda functions
+   - IAM users
+3. Add readable print statements.
+4. Use jq to extract only EC2 instance IDs.
+5. Redirect the output into a report file.
+6. Integrate the script with a Linux cron job.
+7. Schedule it to run automatically every day.
+
+Example cron requirement:
+
+```text
+Run the resource tracker every day at 6 PM.
+```
+
+Example cron entry:
+
+```cron
+0 18 * * * /absolute/path/aws_resource_tracker.sh > /absolute/path/resource_tracker.txt 2>&1
+```
+
+---
+
+## 42. Interview Questions and Answers
+
+### Q1. Why do organizations move to cloud infrastructure?
+
+Organizations move to cloud infrastructure mainly to reduce infrastructure-management overhead, improve scalability, and use flexible pay-as-you-go pricing.
+
+### Q2. What is cloud resource tracking?
+
+Cloud resource tracking is the process of monitoring resources created in a cloud account, such as EC2 instances, S3 buckets, Lambda functions, and EBS volumes.
+
+### Q3. Why is resource tracking important?
+
+It helps organizations understand resource usage, identify unused resources, improve visibility, and control cloud costs.
+
+### Q4. What is AWS CLI?
+
+AWS CLI is a command-line tool used to interact with AWS services and perform operations through terminal commands.
+
+### Q5. What does `aws s3 ls` do?
+
+It lists S3 buckets accessible to the configured AWS identity.
+
+### Q6. What does `aws ec2 describe-instances` do?
+
+It retrieves detailed information about EC2 instances.
+
+### Q7. What does `aws lambda list-functions` do?
+
+It lists Lambda functions available in the selected AWS region.
+
+### Q8. What does `aws iam list-users` do?
+
+It lists IAM users in the AWS account.
+
+### Q9. What is jq?
+
+jq is a command-line JSON processor used to extract and transform values from JSON output.
+
+### Q10. Why is jq useful with AWS CLI?
+
+Many AWS CLI commands return JSON. jq helps extract only the required fields from large, nested responses.
+
+### Q11. Explain this command:
+
+```bash
+aws ec2 describe-instances | jq -r '.Reservations[].Instances[].InstanceId'
+```
+
+It retrieves EC2 instance information, pipes the JSON response to jq, navigates through the Reservations and Instances arrays, and extracts each instance ID as plain text.
+
+### Q12. What is a cron job?
+
+A cron job is a scheduled task in Linux that automatically executes a command or script at a configured time or interval.
+
+### Q13. Why use cron for this project?
+
+Cron ensures that the resource report is generated automatically at a fixed time without requiring manual execution.
+
+### Q14. What is the difference between > and >>?
+
+- `>` overwrites a file.
+- `>>` appends output to a file.
+
+### Q15. What does set -x do?
+
+It enables Bash execution tracing and displays commands before they are executed.
+
+### Q16. What does set +x do?
+
+It disables Bash execution tracing.
+
+### Q17. Why should /bin/bash be used instead of /bin/sh for a Bash script?
+
+Because `/bin/sh` may point to a different shell such as Dash, and Bash-specific syntax may not work in that shell.
+
+### Q18. Why should chmod 777 generally be avoided?
+
+It gives all users read, write, and execute permissions, which can create security risks.
+
+---
+
+## 43. Quick Command Reference
+
+| Purpose | Command |
+|---|---|
+| Check Bash version | `bash --version` |
+| Check AWS CLI | `aws --version` |
+| Configure AWS CLI | `aws configure` |
+| Check jq | `jq --version` |
+| Create script | `touch aws_resource_tracker.sh` |
+| Open script in Vim | `vim aws_resource_tracker.sh` |
+| Add execute permission | `chmod +x aws_resource_tracker.sh` |
+| Run script | `./aws_resource_tracker.sh` |
+| List S3 buckets | `aws s3 ls` |
+| Describe EC2 instances | `aws ec2 describe-instances` |
+| List Lambda functions | `aws lambda list-functions` |
+| List IAM users | `aws iam list-users` |
+| Extract EC2 IDs | `aws ec2 describe-instances \| jq -r '.Reservations[].Instances[].InstanceId'` |
+| Enable debug mode | `set -x` |
+| Disable debug mode | `set +x` |
+| Edit cron jobs | `crontab -e` |
+| Redirect output | `command > file.txt` |
+| Append output | `command >> file.txt` |
+| Redirect errors | `command 2> errors.txt` |
+| Redirect output and errors | `command > output.txt 2>&1` |
+
+---
+
+## 44. Final Summary
+
+This lesson created the foundation of a practical AWS resource-tracking automation project.
+
+The major concepts covered were:
+
+- Why organizations move to cloud infrastructure
+- Manageability and maintenance overhead
+- Pay-as-you-go cloud pricing
+- The importance of tracking cloud resources
+- Bash scripting for DevOps automation
+- AWS CLI authentication and configuration
+- AWS CLI commands for S3, EC2, Lambda, and IAM
+- Script documentation using comments
+- Bash shebang
+- File permissions and script execution
+- Readable output using echo
+- Bash debugging with set -x
+- JSON processing with jq
+- Pipe operators
+- Extracting EC2 instance IDs
+- Redirecting output to report files
+- Scheduling scripts with cron
+- Troubleshooting and security practices
+
+The core idea is:
+
+> Use Bash and AWS CLI to collect AWS resource information, use tools such as jq to make the output readable, save the result as a report, and schedule the script with cron so the process runs automatically.
+
