@@ -447,3 +447,249 @@ The Azure process is similar:
 - Terraform is useful for multi-cloud and hybrid-cloud infrastructure.
 - Automation improves speed, consistency, and efficiency.
 
+# DevOps Zero to Hero — Short Notes
+
+## Day 5 — EC2 Login and AWS Automation
+
+### 1. Connecting to an EC2 Instance
+
+An AWS EC2 instance can be accessed in two main ways:
+
+- Through the AWS Console
+- Through a local terminal using SSH
+
+The AWS Console is easy for beginners, but it is not efficient when managing many virtual machines.
+
+### 2. Connecting Through AWS Console
+
+1. Open the AWS Console.
+2. Go to the EC2 Dashboard.
+3. Select the running instance.
+4. Click the Instance ID.
+5. Click **Connect**.
+6. Select the browser-based connection option.
+7. Click **Connect** again.
+
+This opens a terminal session inside the EC2 instance.
+
+### 3. Connecting Through a Local Terminal
+
+A local terminal is useful for DevOps engineers because it allows faster and repeated access to servers.
+
+Examples:
+
+- Windows Terminal
+- PuTTY
+- MobaXterm
+- NoMachine
+- iTerm for macOS
+
+### 4. Public IP and Private IP
+
+- **Public IP:** Used to connect to the EC2 instance from an external computer.
+- **Private IP:** Used for communication within the AWS network or VPC.
+
+For connecting from a personal laptop, the public IP is generally used.
+
+### 5. SSH Connection
+
+SSH means **Secure Shell**. It is used to securely connect to a remote server.
+
+```bash
+ssh ubuntu@<PUBLIC-IP>
+```
+
+To use a private key:
+
+```bash
+ssh -i <path-to-key.pem> ubuntu@<PUBLIC-IP>
+```
+
+Here, `-i` specifies the identity/private key file.
+
+### 6. PEM File Permissions
+
+A `.pem` file contains sensitive private-key information. Its permissions must be restricted.
+
+```bash
+chmod 600 <path-to-key.pem>
+```
+
+If the permissions are too open, SSH may reject the connection.
+
+**Never share your private key.**
+
+### 7. Testing the Connection
+
+After connecting to the instance, Linux commands can be executed remotely.
+
+```bash
+ls
+touch example.txt
+```
+
+The file is created inside the EC2 instance, not on the local computer.
+
+### 8. Stop vs Terminate
+
+- **Stop:** Temporarily stops the instance. It can usually be started again.
+- **Terminate:** Deletes the instance permanently.
+
+Stop or terminate unused resources to avoid unnecessary charges. Also check storage and other related costs.
+
+### 9. AWS CLI
+
+AWS CLI means **Amazon Web Services Command Line Interface**.
+
+It allows users to interact with AWS services through terminal commands instead of the AWS Console.
+
+It can manage services such as:
+
+- EC2
+- S3
+- EBS
+- IAM
+- Many other AWS services
+
+### 10. Installing and Verifying AWS CLI
+
+Install AWS CLI according to the operating system:
+
+- Windows: MSI installer
+- macOS: Official installer or package manager
+- Linux: Official installation method
+
+Verify the installation:
+
+```bash
+aws --version
+```
+
+### 11. AWS Access Keys
+
+AWS CLI requires authentication.
+
+The credentials include:
+
+- **Access Key ID**
+- **Secret Access Key**
+
+These keys are sensitive and must never be shared publicly.
+
+### 12. Configuring AWS CLI
+
+Run:
+
+```bash
+aws configure
+```
+
+It asks for:
+
+1. AWS Access Key ID
+2. AWS Secret Access Key
+3. Default region
+4. Default output format
+
+Example:
+
+```text
+Default region: us-east-1
+Default output format: json
+```
+
+After configuration, AWS CLI can communicate with the AWS account.
+
+### 13. Useful AWS CLI Commands
+
+List S3 buckets:
+
+```bash
+aws s3 ls
+```
+
+Create an S3 bucket:
+
+```bash
+aws s3 mb s3://<unique-bucket-name>
+```
+
+S3 bucket names must be globally unique.
+
+EC2 commands can be found in the AWS documentation. Creating an instance requires details such as:
+
+- AMI ID
+- Instance type
+- Key pair
+- Security group
+- Subnet ID
+
+### 14. AWS CloudFormation
+
+AWS CloudFormation is an **Infrastructure as Code (IaC)** service.
+
+It uses templates to create and manage AWS resources automatically.
+
+Templates can define:
+
+- EC2 instances
+- S3 buckets
+- VPCs
+- Security groups
+- Other AWS services
+
+Basic process:
+
+1. Prepare a CloudFormation template.
+2. Open CloudFormation in AWS Console.
+3. Create a stack.
+4. Upload or select the template.
+5. Review and create the stack.
+
+### 15. Boto3
+
+Boto3 is the AWS SDK for Python.
+
+It allows Python programs to interact with AWS services and automate tasks.
+
+Use cases include:
+
+- Listing EC2 instances
+- Creating or deleting resources
+- Reading S3 buckets
+- Automating infrastructure operations
+
+Boto3 can use credentials configured through `aws configure`.
+
+### 16. Automation Methods
+
+AWS resources can be automated using:
+
+- AWS CLI
+- AWS API
+- AWS CloudFormation
+- AWS CDK
+- Terraform
+- Python Boto3
+- Shell scripts
+
+### 17. Assignment
+
+1. Install AWS CLI.
+2. Configure AWS credentials.
+3. List S3 buckets using the CLI.
+4. Explore EC2 commands in AWS documentation.
+5. Connect to an EC2 instance using SSH.
+6. Learn the basics of CloudFormation and Boto3.
+
+### 18. Interview Points
+
+- SSH is used to securely connect to remote servers.
+- The public IP is used for external access to an EC2 instance.
+- A PEM file contains the private key used for authentication.
+- AWS CLI manages AWS services from the terminal.
+- `aws configure` sets up AWS CLI credentials and default settings.
+- CloudFormation is AWS Infrastructure as Code.
+- Boto3 is the Python SDK for AWS automation.
+- Stopping an instance is temporary, while terminating it deletes the instance.
+
