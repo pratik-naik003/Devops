@@ -3229,3 +3229,1869 @@ The core idea is:
 
 > Use Bash and AWS CLI to collect AWS resource information, use tools such as jq to make the output readable, save the result as a report, and schedule the script with cron so the process runs automatically.
 
+
+
+# DevOps Day 8 — Shell Scripting Project Using GitHub API
+
+## 1. Project Overview
+
+This project demonstrates how a DevOps engineer can use Bash shell scripting and the GitHub REST API to retrieve users who have access to a GitHub repository.
+
+The manual process requires opening GitHub in a browser, opening the repository, navigating to Settings, opening Collaborators and teams, and checking users one by one. This becomes inefficient when an engineer manages many repositories.
+
+The automated process uses:
+
+- Linux
+- Bash
+- GitHub REST API
+- `curl`
+- JSON
+- `jq`
+- Environment variables
+- Command-line arguments
+- Bash functions
+- AWS EC2 as the execution environment
+
+### Main Objective
+
+Create a reusable shell script that accepts a repository owner/organization and repository name, calls the GitHub API, filters the JSON response, and prints users who have repository access.
+
+---
+
+## 2. Real-World DevOps Use Case
+
+DevOps engineers often maintain repositories for multiple teams and microservices. They may be responsible for:
+
+- Creating repositories
+- Managing repository access
+- Granting read or write permissions
+- Managing collaborators and teams
+- Creating CI/CD pipelines
+- Monitoring repository security
+- Auditing access
+- Revoking access when an employee leaves
+- Checking whether external collaborators still need access
+
+### Employee Offboarding Example
+
+Suppose an employee resigns from an organization.
+
+The DevOps engineer may need to:
+
+1. Identify the repositories accessible to the employee.
+2. Check the employee's permission level.
+3. Determine whether the access is direct or inherited through a team.
+4. Revoke access where required.
+5. Record the change for auditing.
+
+Instead of manually opening every repository, a script can query GitHub programmatically.
+
+> This project focuses on listing access. Revoking access should be implemented separately and only with proper authorization and testing.
+
+---
+
+## 3. UI, API, and CLI
+
+### 3.1 User Interface
+
+A User Interface is the graphical interface used by people.
+
+For GitHub, a user may:
+
+1. Open `github.com`.
+2. Open an organization.
+3. Select a repository.
+4. Open Settings.
+5. Open Collaborators and teams.
+6. View users and permissions.
+
+This is useful for occasional tasks but difficult to scale.
+
+### 3.2 API
+
+API means Application Programming Interface.
+
+An API is a defined interface that allows one application or script to communicate with another application programmatically.
+
+Instead of clicking through GitHub, a script sends an HTTP request to GitHub's API and receives structured data, usually JSON.
+
+### 3.3 CLI
+
+CLI means Command-Line Interface.
+
+Examples include:
+
+```bash
+aws s3 ls
+kubectl get pods
+git status
+gh repo list
+```
+
+GitHub can be accessed using both GitHub CLI and the GitHub API. This project uses the API because it provides direct access to structured data and is easy to integrate into scripts.
+
+---
+
+## 4. How API Communication Works
+
+The overall flow is:
+
+```text
+Bash Script
+    |
+    | HTTP request using curl
+    v
+GitHub REST API
+    |
+    | JSON response
+    v
+Bash Script
+    |
+    | jq filtering
+    v
+Required usernames and permissions
+```
+
+A DevOps engineer does not need to write GitHub's API. GitHub developers have already created and documented the API. The DevOps engineer consumes the API.
+
+### Languages and Tools That Can Consume APIs
+
+| Environment | Common Tool |
+|---|---|
+| Bash | `curl` |
+| Python | `requests` or SDKs |
+| JavaScript | `fetch` or Axios |
+| Java | HTTP client libraries |
+| Postman | GUI API client |
+| GitHub CLI | `gh` |
+
+---
+
+## 5. HTTP and REST API Basics
+
+HTTP stands for Hypertext Transfer Protocol. It is used for communication between clients and servers.
+
+In this project:
+
+- Bash is the client.
+- GitHub is the server.
+- `curl` sends the request.
+- GitHub returns a response.
+
+Common HTTP methods include:
+
+| Method | Purpose |
+|---|---|
+| GET | Retrieve information |
+| POST | Create a resource or submit data |
+| PUT | Replace or update a resource |
+| PATCH | Partially update a resource |
+| DELETE | Delete a resource |
+
+The collaborator-listing operation is a read operation and normally uses `GET`.
+
+---
+
+## 6. GitHub REST API Documentation
+
+Before writing an API script, read the official API documentation.
+
+Documentation normally explains:
+
+- Base URL
+- Endpoint
+- HTTP method
+- Required path parameters
+- Query parameters
+- Request headers
+- Authentication
+- Required permissions
+- Example requests
+- Response JSON structure
+- Error responses
+- Pagination
+
+### Collaborators Endpoint
+
+The endpoint used by this project is:
+
+```text
+https://api.github.com/repos/OWNER/REPOSITORY/collaborators
+```
+
+Here:
+
+- `https://api.github.com` is the API base URL.
+- `repos` identifies repository APIs.
+- `OWNER` is the organization or repository owner.
+- `REPOSITORY` is the repository name.
+- `collaborators` identifies the operation.
+
+Example format:
+
+```text
+https://api.github.com/repos/my-organization/my-repository/collaborators
+```
+
+`OWNER` and `REPOSITORY` are placeholders and must be replaced with actual values.
+
+---
+
+## 7. Other Useful GitHub API Endpoints
+
+### List Pull Requests
+
+```text
+https://api.github.com/repos/OWNER/REPOSITORY/pulls
+```
+
+### List Issues
+
+```text
+https://api.github.com/repos/OWNER/REPOSITORY/issues
+```
+
+### Get a Specific Issue
+
+```text
+https://api.github.com/repos/OWNER/REPOSITORY/issues/ISSUE_NUMBER
+```
+
+### List Collaborators
+
+```text
+https://api.github.com/repos/OWNER/REPOSITORY/collaborators
+```
+
+The same general process applies to each endpoint:
+
+1. Read the documentation.
+2. Identify the URL.
+3. Identify the HTTP method.
+4. Understand authentication.
+5. Send the request.
+6. Parse the response.
+
+---
+
+## 8. What Is JSON?
+
+JSON means JavaScript Object Notation. APIs commonly use JSON to exchange structured information.
+
+Example:
+
+```json
+[
+  {
+    "login": "developer1",
+    "id": 12345,
+    "permissions": {
+      "pull": true,
+      "push": true,
+      "admin": false
+    }
+  },
+  {
+    "login": "admin1",
+    "id": 67890,
+    "permissions": {
+      "pull": true,
+      "push": true,
+      "admin": true
+    }
+  }
+]
+```
+
+Important fields:
+
+- `login`: GitHub username
+- `id`: unique user ID
+- `permissions`: permission object
+- `pull`: read/pull permission
+- `push`: write/push permission
+- `admin`: administrative permission
+
+The actual response can vary based on repository type, organization membership, permissions, and API behavior.
+
+---
+
+## 9. What Is curl?
+
+`curl` is a command-line utility for transferring data over protocols such as HTTP and HTTPS.
+
+It is commonly used for:
+
+- Calling REST APIs
+- Testing endpoints
+- Downloading files
+- Sending headers
+- Debugging requests
+- Automating API operations
+
+### Basic Syntax
+
+```bash
+curl URL
+```
+
+### Example
+
+```bash
+curl https://api.github.com
+```
+
+### API Request Example
+
+```bash
+curl   -H "Accept: application/vnd.github+json"   https://api.github.com/repos/OWNER/REPOSITORY/collaborators
+```
+
+### Important curl Options
+
+| Option | Meaning |
+|---|---|
+| `-H` | Add an HTTP header |
+| `-s` | Silent mode |
+| `-S` | Show errors with silent mode |
+| `-f` | Fail on HTTP errors |
+| `-L` | Follow redirects |
+| `-X` | Specify HTTP method |
+| `-d` | Send request data |
+| `-o` | Save output to a file |
+
+---
+
+## 10. GitHub Authentication
+
+Private repository information and protected operations require authentication.
+
+The project uses a GitHub personal access token rather than a normal browser password.
+
+### Why Tokens Are Used
+
+A browser login usually uses a username, password, session, and cookies. API scripts commonly use a token in an HTTP authorization header.
+
+Example pattern:
+
+```bash
+-H "Authorization: Bearer ${GITHUB_TOKEN}"
+```
+
+The exact authentication method should follow the current GitHub API documentation and the token type being used.
+
+### Token Security
+
+A token is a secret credential. If exposed, another person may perform actions allowed by the token.
+
+Never:
+
+- Commit tokens to Git.
+- Put tokens directly into public scripts.
+- Share tokens in screenshots.
+- Paste tokens into chat or issue trackers.
+- Print tokens in CI/CD logs.
+- Grant unnecessary permissions.
+
+Always:
+
+- Use least privilege.
+- Set an expiration where possible.
+- Store secrets securely.
+- Rotate tokens.
+- Revoke exposed tokens immediately.
+
+---
+
+## 11. Creating a Personal Access Token
+
+General process:
+
+1. Log in to GitHub.
+2. Open account settings.
+3. Open Developer settings.
+4. Open Personal access tokens.
+5. Select the appropriate token type.
+6. Give the token a descriptive name.
+7. Set an expiration date if available.
+8. Grant only required permissions.
+9. Generate the token.
+10. Copy and store it securely.
+
+The required permission depends on the repository and operation. Do not select every permission automatically.
+
+### Principle of Least Privilege
+
+Grant only the minimum permissions required to complete the task.
+
+For a read-only collaborator listing script, avoid granting administrative or write permissions unless they are genuinely required.
+
+---
+
+## 12. Environment Variables
+
+Environment variables store values in the shell environment.
+
+The project uses environment variables for credentials so they do not need to be hardcoded in the script.
+
+### Export Variables
+
+```bash
+export GITHUB_USERNAME="your-github-username"
+export GITHUB_TOKEN="your-github-token"
+```
+
+If the original script expects lowercase names, use the names expected by that script:
+
+```bash
+export username="your-github-username"
+export token="your-github-token"
+```
+
+Variable names are case-sensitive.
+
+### Read a Variable
+
+```bash
+echo "$GITHUB_USERNAME"
+```
+
+Avoid printing the token.
+
+### Check Whether a Token Exists
+
+```bash
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  echo "GitHub token is set"
+else
+  echo "GitHub token is missing"
+fi
+```
+
+### Unset a Variable
+
+```bash
+unset GITHUB_TOKEN
+```
+
+### Why Environment Variables Are Better Than Hardcoding
+
+Unsafe example:
+
+```bash
+TOKEN="my-secret-token"
+```
+
+Better approach:
+
+```bash
+TOKEN="${GITHUB_TOKEN}"
+```
+
+For production systems, use secret managers or CI/CD secret stores instead of relying only on interactive shell exports.
+
+---
+
+## 13. Running the Project on AWS EC2
+
+The demonstration uses an EC2 instance as the Linux environment.
+
+The project can also run on:
+
+- Local Linux
+- Ubuntu VM
+- WSL
+- Cloud shell
+- Git Bash, if compatible
+- AWS EC2
+- Other Linux servers
+
+### EC2 Workflow
+
+1. Launch an EC2 instance.
+2. Select Ubuntu or another Linux distribution.
+3. Configure a security group.
+4. Create or select a key pair.
+5. Launch the instance.
+6. Copy the public IP address.
+7. Connect using SSH.
+8. Install dependencies.
+9. Clone the project.
+10. Export credentials.
+11. Execute the script.
+
+### SSH Example
+
+```bash
+ssh -i /path/to/key.pem ubuntu@PUBLIC_IP
+```
+
+The default username depends on the AMI. Ubuntu commonly uses `ubuntu`.
+
+PuTTY commonly uses `.ppk` keys, while OpenSSH commonly uses `.pem` keys.
+
+---
+
+## 14. Clone the Project
+
+Clone the repository containing the script:
+
+```bash
+git clone REPOSITORY_URL
+```
+
+Move into the directory:
+
+```bash
+cd PROJECT_DIRECTORY
+```
+
+List files:
+
+```bash
+ls
+```
+
+Example:
+
+```text
+shell-script-project/
+└── github-api/
+    └── list_users.sh
+```
+
+Move into the project folder:
+
+```bash
+cd github-api
+```
+
+---
+
+## 15. Install jq and curl
+
+The script requires `jq` for JSON processing.
+
+### Ubuntu/Debian
+
+```bash
+sudo apt update
+sudo apt install curl jq -y
+```
+
+### Verify Installation
+
+```bash
+curl --version
+jq --version
+bash --version
+```
+
+If `jq` is missing, the script cannot filter the API response.
+
+---
+
+## 16. File Permissions
+
+Check permissions:
+
+```bash
+ls -l list_users.sh
+```
+
+Add execute permission:
+
+```bash
+chmod +x list_users.sh
+```
+
+Run the script:
+
+```bash
+./list_users.sh OWNER REPOSITORY
+```
+
+### Understanding chmod 777
+
+The command shown in the demonstration is:
+
+```bash
+chmod 777 list_users.sh
+```
+
+Each digit represents permissions:
+
+- Read = 4
+- Write = 2
+- Execute = 1
+
+Therefore:
+
+```text
+7 = 4 + 2 + 1 = read + write + execute
+```
+
+The three digits represent:
+
+1. Owner
+2. Group
+3. Others
+
+So `777` gives everyone read, write, and execute access.
+
+This is usually too permissive. Prefer narrower permissions such as:
+
+```bash
+chmod 700 list_users.sh
+```
+
+or:
+
+```bash
+chmod 750 list_users.sh
+```
+
+Use the permission model appropriate for your environment.
+
+---
+
+## 17. Command-Line Arguments in Bash
+
+Command-line arguments make scripts reusable.
+
+Example:
+
+```bash
+./list_users.sh my-organization my-repository
+```
+
+Bash special variables:
+
+| Variable | Meaning |
+|---|---|
+| `$0` | Script name |
+| `$1` | First argument |
+| `$2` | Second argument |
+| `$3` | Third argument |
+| `$#` | Number of arguments |
+| `$@` | All arguments |
+
+For this project:
+
+```text
+$1 = repository owner or organization
+$2 = repository name
+```
+
+Example:
+
+```bash
+./list_users.sh devops-by-examples python
+```
+
+Then:
+
+```text
+$1 = devops-by-examples
+$2 = python
+$# = 2
+```
+
+---
+
+## 18. Building the API URL
+
+The script can construct the endpoint dynamically:
+
+```bash
+API_URL="https://api.github.com/repos/$1/$2/collaborators"
+```
+
+For:
+
+```bash
+./list_users.sh devops-by-examples python
+```
+
+the URL becomes:
+
+```text
+https://api.github.com/repos/devops-by-examples/python/collaborators
+```
+
+This allows one script to work with many repositories.
+
+---
+
+## 19. Bash Functions
+
+A function is a reusable block of code.
+
+Functions improve:
+
+- Readability
+- Maintainability
+- Reusability
+- Testing
+- Debugging
+- Separation of responsibilities
+
+Useful functions in this project include:
+
+- `usage`
+- `validate_inputs`
+- `get_collaborators`
+- `print_users`
+- `main`
+
+A script can technically be written as one block, but functions make the logic easier to understand and extend.
+
+---
+
+## 20. Example Function to Fetch Collaborators
+
+```bash
+get_collaborators() {
+  local owner="$1"
+  local repo="$2"
+
+  local endpoint="https://api.github.com/repos/${owner}/${repo}/collaborators"
+
+  curl --fail-with-body --silent --show-error     -H "Accept: application/vnd.github+json"     -H "Authorization: Bearer ${GITHUB_TOKEN}"     -H "X-GitHub-Api-Version: 2022-11-28"     "$endpoint"
+}
+```
+
+### Explanation
+
+- `local owner="$1"` stores the first function argument.
+- `local repo="$2"` stores the second function argument.
+- `endpoint` stores the API URL.
+- `curl` sends the request.
+- `--silent` suppresses the progress meter.
+- `--show-error` displays errors.
+- `--fail-with-body` treats HTTP errors as failures while retaining useful response information.
+- `-H` adds an HTTP header.
+- `Authorization` sends the token.
+- `Accept` requests JSON.
+- The API version header specifies a GitHub API version.
+
+---
+
+## 21. What Is jq?
+
+`jq` is a command-line JSON processor.
+
+It can:
+
+- Read JSON
+- Extract fields
+- Filter objects
+- Iterate through arrays
+- Transform data
+- Format output
+- Convert structured JSON into plain text
+
+### Basic Example
+
+```bash
+echo '{"login":"developer1","id":123}' | jq '.login'
+```
+
+Output:
+
+```text
+"developer1"
+```
+
+Raw output removes the quotation marks:
+
+```bash
+echo '{"login":"developer1","id":123}' | jq -r '.login'
+```
+
+Output:
+
+```text
+developer1
+```
+
+The `-r` option means raw output.
+
+---
+
+## 22. jq Dot Notation
+
+Given:
+
+```json
+{
+  "permissions": {
+    "pull": true,
+    "push": true,
+    "admin": false
+  }
+}
+```
+
+Access the permissions object:
+
+```bash
+jq '.permissions'
+```
+
+Access pull permission:
+
+```bash
+jq '.permissions.pull'
+```
+
+Access admin permission:
+
+```bash
+jq '.permissions.admin'
+```
+
+The general format is:
+
+```text
+.object.field
+```
+
+---
+
+## 23. jq Arrays and the `.[]` Operator
+
+The collaborator response is generally an array.
+
+Example:
+
+```json
+[
+  {
+    "login": "developer1"
+  },
+  {
+    "login": "developer2"
+  }
+]
+```
+
+To extract every login:
+
+```bash
+jq -r '.[].login'
+```
+
+Output:
+
+```text
+developer1
+developer2
+```
+
+Here:
+
+- `.` represents the current JSON input.
+- `[]` accesses array elements.
+- `.login` extracts the login field.
+
+---
+
+## 24. jq Pipe Operator
+
+The jq pipe operator is:
+
+```text
+|
+```
+
+It passes the result of one expression to the next expression.
+
+Example:
+
+```bash
+jq '.[] | .login'
+```
+
+Meaning:
+
+1. Iterate over every array object.
+2. Extract the `login` field from each object.
+
+---
+
+## 25. Filtering by Permission
+
+To list users with pull permission:
+
+```bash
+jq -r '.[] | select(.permissions.pull == true) | .login'
+```
+
+### Explanation
+
+- `.[]`: iterate through each user object.
+- `select(...)`: keep only objects matching a condition.
+- `.permissions.pull == true`: check pull permission.
+- `.login`: print the username.
+
+### Filter Non-Admin Users
+
+```bash
+jq -r '.[] | select(.permissions.pull == true and .permissions.admin == false) | .login'
+```
+
+This selects users who:
+
+- Have pull permission.
+- Are not administrators.
+
+The exact filter depends on whether the goal is to list all users, only developers, only writers, or only non-admin collaborators.
+
+---
+
+## 26. Pull, Push, and Admin Permissions
+
+### Pull
+
+```json
+"pull": true
+```
+
+Generally represents read or pull access.
+
+### Push
+
+```json
+"push": true
+```
+
+Generally represents write or push access.
+
+### Admin
+
+```json
+"admin": true
+```
+
+Represents administrative access.
+
+GitHub access can also be affected by:
+
+- Organization membership
+- Team permissions
+- Repository ownership
+- Outside collaborator status
+- Direct repository permissions
+- Token permissions
+
+Therefore, the API output should be interpreted according to the organization's access model.
+
+---
+
+## 27. Why Some Users May Not Appear
+
+The transcript explains that repository owners or administrators may not appear in the same way as outside collaborators.
+
+Possible reasons include:
+
+- The user is a repository owner.
+- The user is an organization member.
+- Access is inherited through a team.
+- The endpoint returns direct collaborators differently from inherited access.
+- The authenticated token lacks sufficient permissions.
+- The API response is an error object instead of a collaborator array.
+
+An API does not bypass authorization. The authenticated user can retrieve only information allowed by GitHub's permission system.
+
+---
+
+## 28. Complete Example Script
+
+Save the following as `list_users.sh`.
+
+```bash
+#!/bin/bash
+
+# ------------------------------------------------------------
+# Script Name: list_users.sh
+# Description:
+#   Lists repository collaborators with pull permission
+#   using the GitHub REST API.
+#
+# Usage:
+#   ./list_users.sh OWNER REPOSITORY
+#
+# Required Environment Variables:
+#   GITHUB_USERNAME
+#   GITHUB_TOKEN
+#
+# Dependencies:
+#   curl
+#   jq
+# ------------------------------------------------------------
+
+set -euo pipefail
+
+EXPECTED_ARGS=2
+
+usage() {
+  echo "Usage: $0 OWNER REPOSITORY"
+  echo
+  echo "Example:"
+  echo "  $0 my-organization my-repository"
+}
+
+validate_inputs() {
+  if [ "$#" -ne "$EXPECTED_ARGS" ]; then
+    echo "Error: Expected $EXPECTED_ARGS arguments, but received $#."
+    usage
+    exit 1
+  fi
+
+  if [ -z "${GITHUB_USERNAME:-}" ]; then
+    echo "Error: GITHUB_USERNAME is not set."
+    exit 1
+  fi
+
+  if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "Error: GITHUB_TOKEN is not set."
+    exit 1
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "Error: curl is not installed."
+    exit 1
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "Error: jq is not installed."
+    exit 1
+  fi
+}
+
+get_collaborators() {
+  local owner="$1"
+  local repo="$2"
+  local endpoint="https://api.github.com/repos/${owner}/${repo}/collaborators"
+
+  curl --fail-with-body --silent --show-error     -H "Accept: application/vnd.github+json"     -H "Authorization: Bearer ${GITHUB_TOKEN}"     -H "X-GitHub-Api-Version: 2022-11-28"     "$endpoint"
+}
+
+print_users() {
+  local response="$1"
+
+  local users
+  users=$(echo "$response" | jq -r '
+    [
+      .[]
+      | select(.permissions.pull == true)
+      | .login
+    ]
+    | .[]
+  ')
+
+  if [ -z "$users" ]; then
+    echo "No users with pull permission were found."
+  else
+    echo "Users with pull permission:"
+    echo "$users"
+  fi
+}
+
+main() {
+  validate_inputs "$@"
+
+  local owner="$1"
+  local repo="$2"
+  local response
+
+  echo "Fetching collaborators for ${owner}/${repo}..."
+
+  response=$(get_collaborators "$owner" "$repo")
+
+  print_users "$response"
+}
+
+main "$@"
+```
+
+---
+
+## 29. Script Explanation
+
+### Shebang
+
+```bash
+#!/bin/bash
+```
+
+The shebang tells the operating system to execute the script using Bash.
+
+### Strict Mode
+
+```bash
+set -euo pipefail
+```
+
+- `-e`: stop when a command fails, subject to Bash rules.
+- `-u`: treat unset variables as errors.
+- `pipefail`: fail a pipeline when an earlier command fails.
+
+### Expected Argument Count
+
+```bash
+EXPECTED_ARGS=2
+```
+
+The script expects owner and repository name.
+
+### Input Validation
+
+The validation function checks:
+
+- Argument count
+- Username variable
+- Token variable
+- `curl`
+- `jq`
+
+### API Function
+
+`get_collaborators` builds the endpoint and calls GitHub.
+
+### JSON Filtering
+
+`print_users` uses `jq` to filter the response and print usernames.
+
+### Main Function
+
+`main` controls the sequence:
+
+```text
+Validate inputs
+    |
+Read arguments
+    |
+Call API
+    |
+Store JSON response
+    |
+Filter JSON
+    |
+Print result
+```
+
+### Passing Arguments to main
+
+```bash
+main "$@"
+```
+
+This passes all script arguments to the `main` function.
+
+---
+
+## 30. Run the Script
+
+### Step 1: Export Credentials
+
+```bash
+export GITHUB_USERNAME="your-github-username"
+export GITHUB_TOKEN="your-github-token"
+```
+
+### Step 2: Add Execute Permission
+
+```bash
+chmod +x list_users.sh
+```
+
+### Step 3: Execute
+
+```bash
+./list_users.sh OWNER REPOSITORY
+```
+
+Example:
+
+```bash
+./list_users.sh devops-by-examples python
+```
+
+Expected output depends on the repository:
+
+```text
+Fetching collaborators for devops-by-examples/python...
+Users with pull permission:
+developer1
+developer2
+```
+
+---
+
+## 31. Test the API Directly
+
+Before debugging the complete script, test the endpoint manually:
+
+```bash
+curl --fail-with-body --silent --show-error   -H "Accept: application/vnd.github+json"   -H "Authorization: Bearer ${GITHUB_TOKEN}"   "https://api.github.com/repos/OWNER/REPOSITORY/collaborators"
+```
+
+This helps determine whether the problem is related to:
+
+- Network access
+- API URL
+- Authentication
+- Authorization
+- Repository name
+- JSON parsing
+- Script logic
+
+---
+
+## 32. Debugging Bash Scripts
+
+### Enable Debugging
+
+```bash
+set -x
+```
+
+This prints commands as they execute.
+
+### Disable Debugging
+
+```bash
+set +x
+```
+
+### Run a Script in Debug Mode
+
+```bash
+bash -x list_users.sh OWNER REPOSITORY
+```
+
+### Security Warning
+
+Do not use debug mode carelessly when secrets are involved. Expanded environment variables or authorization headers may appear in logs.
+
+Never expose tokens in:
+
+- Terminal screenshots
+- CI/CD logs
+- Shared shell sessions
+- Public GitHub issues
+- Recorded tutorials
+
+---
+
+## 33. Common Errors and Solutions
+
+### Error: Permission Denied
+
+Cause: The script lacks execute permission.
+
+Solution:
+
+```bash
+chmod +x list_users.sh
+```
+
+### Error: jq Not Found
+
+Cause: `jq` is not installed.
+
+Solution:
+
+```bash
+sudo apt update
+sudo apt install jq -y
+```
+
+### Error: curl Not Found
+
+Cause: `curl` is not installed.
+
+Solution:
+
+```bash
+sudo apt update
+sudo apt install curl -y
+```
+
+### Error: Wrong Number of Arguments
+
+Cause: Owner and repository arguments were not supplied.
+
+Correct usage:
+
+```bash
+./list_users.sh OWNER REPOSITORY
+```
+
+### Error: Token Missing
+
+Cause: The environment variable is not exported or the name is incorrect.
+
+Solution:
+
+```bash
+export GITHUB_TOKEN="your-github-token"
+```
+
+### Error: Bad Credentials
+
+Possible causes:
+
+- Invalid token
+- Expired token
+- Revoked token
+- Incorrect authorization header
+- Insufficient permissions
+
+### Error: Repository Not Found
+
+Possible causes:
+
+- Wrong owner
+- Wrong repository name
+- Private repository
+- Insufficient access
+- Repository was renamed or deleted
+
+### Error: Cannot Index String with String
+
+This may happen when `jq` expects a collaborator array but receives an error object such as:
+
+```json
+{
+  "message": "Not Found"
+}
+```
+
+Instead of:
+
+```json
+[
+  {
+    "login": "developer1"
+  }
+]
+```
+
+Check the raw API response, HTTP status, token, repository name, and access permissions.
+
+### Error: Forbidden or Rate Limited
+
+Possible causes:
+
+- Token lacks required permission.
+- API rate limit was reached.
+- Too many requests were made.
+- Organization policy restricts access.
+
+---
+
+## 34. Practice Organization Setup
+
+If you do not have access to a company organization:
+
+1. Log in to GitHub.
+2. Create a practice organization if necessary.
+3. Create a repository inside it.
+4. Add members or outside collaborators.
+5. Assign different permissions.
+6. Create a suitable token.
+7. Run the script against the practice repository.
+
+This allows you to test:
+
+- Pull permissions
+- Push permissions
+- Admin permissions
+- Outside collaborators
+- Invalid repositories
+- Missing permissions
+- API error handling
+
+Only access repositories and organizations for which you have authorization.
+
+---
+
+## 35. Improvements for Production Use
+
+### 35.1 Add Script Documentation
+
+Include:
+
+- Purpose
+- Usage
+- Arguments
+- Environment variables
+- Dependencies
+- Author
+- Contact
+- Limitations
+
+### 35.2 Validate All Inputs
+
+Validate:
+
+- Number of arguments
+- Empty owner
+- Empty repository
+- Missing token
+- Missing dependencies
+
+### 35.3 Add HTTP Status Handling
+
+Handle status codes such as:
+
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `429 Too Many Requests`
+- `500 Internal Server Error`
+
+### 35.4 Add Pagination
+
+GitHub APIs may return results across multiple pages. A production script should handle pagination using query parameters, Link headers, or another supported approach.
+
+### 35.5 Support Permission Types
+
+Allow the user to select:
+
+- Pull/read
+- Push/write
+- Admin
+- Non-admin
+
+### 35.6 Add Logging
+
+Log:
+
+- Repository checked
+- Execution time
+- Success/failure
+- Number of users found
+
+Never log tokens or authorization headers.
+
+### 35.7 Support Multiple Output Formats
+
+Possible formats:
+
+- Plain text
+- JSON
+- CSV
+- Markdown
+- HTML
+
+### 35.8 Process Multiple Repositories
+
+Use a loop or retrieve repository names dynamically through the GitHub API.
+
+### 35.9 Use Secret Managers
+
+In production, store tokens in:
+
+- GitHub Actions Secrets
+- AWS Secrets Manager
+- AWS Systems Manager Parameter Store
+- HashiCorp Vault
+- CI/CD secret stores
+
+### 35.10 Add Notifications
+
+Reports can be sent to:
+
+- Email
+- Slack
+- Microsoft Teams
+- SNS
+- Ticketing systems
+
+---
+
+## 36. Processing Multiple Repositories
+
+Example:
+
+```bash
+OWNER="my-organization"
+
+for repo in frontend backend payments user-service infrastructure
+do
+  echo "Checking repository: $repo"
+  ./list_users.sh "$OWNER" "$repo"
+  echo "--------------------------------"
+done
+```
+
+For a larger organization, retrieve repository names through the GitHub API rather than hardcoding them.
+
+### Organization-Wide Workflow
+
+```text
+Retrieve repositories
+    |
+    v
+Loop through repositories
+    |
+    v
+Call collaborators endpoint
+    |
+    v
+Filter users and permissions
+    |
+    v
+Generate access report
+```
+
+---
+
+## 37. Security Best Practices
+
+1. Use least-privilege tokens.
+2. Never commit secrets to Git.
+3. Use `.gitignore` for local secret files.
+4. Store production secrets in a secret manager.
+5. Rotate tokens periodically.
+6. Revoke exposed tokens immediately.
+7. Avoid printing secrets.
+8. Avoid debug mode when secrets may be expanded.
+9. Use HTTPS for API communication.
+10. Test scripts only against authorized repositories.
+11. Review API permissions before generating tokens.
+12. Limit access to generated reports because they may contain sensitive information.
+
+Example `.gitignore` entries:
+
+```gitignore
+.env
+*.token
+secrets/
+```
+
+---
+
+## 38. Useful Bash Concepts
+
+| Concept | Meaning |
+|---|---|
+| Shebang | Selects the interpreter |
+| Variable | Stores a value |
+| `export` | Makes a variable available to child processes |
+| Environment variable | Variable inherited by processes |
+| Function | Reusable block of code |
+| `$1` | First argument |
+| `$2` | Second argument |
+| `$#` | Number of arguments |
+| `$@` | All arguments |
+| `local` | Function-local variable |
+| `if` | Conditional execution |
+| `-z` | Checks whether a string is empty |
+| `-ne` | Numeric not-equal comparison |
+| `curl` | HTTP request utility |
+| `jq` | JSON processor |
+| `|` | Pipeline operator |
+| `chmod` | Changes file permissions |
+| `sudo` | Runs with elevated privileges |
+| `exit` | Terminates a script |
+| `set -euo pipefail` | Enables safer shell behavior |
+
+---
+
+## 39. Command Reference
+
+### Linux Navigation
+
+```bash
+pwd
+ls
+cd DIRECTORY
+cd ..
+```
+
+### Clone Repository
+
+```bash
+git clone REPOSITORY_URL
+```
+
+### Install Dependencies
+
+```bash
+sudo apt update
+sudo apt install curl jq -y
+```
+
+### Verify Tools
+
+```bash
+bash --version
+curl --version
+jq --version
+```
+
+### Export Credentials
+
+```bash
+export GITHUB_USERNAME="your-username"
+export GITHUB_TOKEN="your-token"
+```
+
+### Check Token Presence Safely
+
+```bash
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+  echo "Token is set"
+else
+  echo "Token is missing"
+fi
+```
+
+### Check Permissions
+
+```bash
+ls -l list_users.sh
+```
+
+### Add Execute Permission
+
+```bash
+chmod +x list_users.sh
+```
+
+### Execute Script
+
+```bash
+./list_users.sh OWNER REPOSITORY
+```
+
+### Run with Bash
+
+```bash
+bash list_users.sh OWNER REPOSITORY
+```
+
+### Debug Script
+
+```bash
+bash -x list_users.sh OWNER REPOSITORY
+```
+
+### Parse JSON
+
+```bash
+echo '{"login":"developer1"}' | jq -r '.login'
+```
+
+### Extract Logins
+
+```bash
+jq -r '.[].login'
+```
+
+### Filter Pull Users
+
+```bash
+jq -r '.[] | select(.permissions.pull == true) | .login'
+```
+
+### Filter Non-Admin Users
+
+```bash
+jq -r '.[] | select(.permissions.pull == true and .permissions.admin == false) | .login'
+```
+
+---
+
+## 40. Assignments
+
+### Assignment 1: Add Documentation
+
+Add a complete header with:
+
+- Script name
+- Description
+- Usage
+- Required variables
+- Dependencies
+- Author
+- Contact information
+
+### Assignment 2: Add a Helper Function
+
+Create a helper function that checks whether exactly two command-line arguments were supplied.
+
+### Assignment 3: Validate Dependencies
+
+Check whether `curl` and `jq` are installed.
+
+### Assignment 4: Add Permission Filters
+
+Allow users to list:
+
+- Pull users
+- Push users
+- Admin users
+- Non-admin users
+
+### Assignment 5: Process Multiple Repositories
+
+Use a loop to process several repositories.
+
+### Assignment 6: Add Error Handling
+
+Handle:
+
+- Missing token
+- Invalid token
+- Missing repository
+- Unauthorized access
+- Empty response
+- Invalid JSON
+- Rate limiting
+
+### Assignment 7: Add Pagination
+
+Support repositories with many collaborators.
+
+### Assignment 8: Generate a Report
+
+Save the output to a timestamped report file:
+
+```bash
+report_file="github_access_$(date +%Y%m%d_%H%M%S).txt"
+```
+
+---
+
+## 41. Interview Questions and Answers
+
+### Q1. What is an API?
+
+An API is an interface that allows applications to communicate programmatically.
+
+### Q2. How can GitHub be accessed programmatically?
+
+Using GitHub REST API, GraphQL API, GitHub CLI, SDKs, or scripts written in Bash, Python, JavaScript, or other languages.
+
+### Q3. What is curl?
+
+`curl` is a command-line utility used to send and receive data over HTTP, HTTPS, and other protocols.
+
+### Q4. Why is jq used?
+
+GitHub returns JSON. `jq` extracts and filters the required fields from that JSON.
+
+### Q5. What is a personal access token?
+
+It is a credential used to authenticate API requests.
+
+### Q6. Why should tokens not be hardcoded?
+
+Hardcoded tokens can be committed to source control or exposed in logs and screenshots.
+
+### Q7. What are `$1`, `$2`, and `$#`?
+
+- `$1`: first argument
+- `$2`: second argument
+- `$#`: number of arguments
+
+### Q8. What does the shebang do?
+
+It specifies the interpreter used to execute the script.
+
+### Q9. What does `chmod +x` do?
+
+It adds execute permission to a file.
+
+### Q10. Why is chmod 777 discouraged?
+
+It grants read, write, and execute permissions to everyone, which is unnecessarily broad in most cases.
+
+### Q11. What is a Bash function?
+
+A reusable block of code that performs a specific task.
+
+### Q12. What does `.[]` mean in jq?
+
+It iterates through the elements of a JSON array.
+
+### Q13. What does `select()` do in jq?
+
+It filters JSON objects according to a condition.
+
+### Q14. Why might an API request fail?
+
+Because of an invalid token, insufficient permissions, incorrect endpoint, incorrect repository name, rate limiting, or network problems.
+
+### Q15. Can an API bypass GitHub permissions?
+
+No. API requests are subject to authentication and authorization.
+
+### Q16. How can this project be used in real DevOps work?
+
+For repository access audits, employee offboarding, compliance checks, security reviews, collaborator reports, and scheduled monitoring.
+
+---
+
+## 42. Final Project Flow
+
+```text
+Start
+  |
+  v
+Read owner and repository arguments
+  |
+  v
+Validate arguments and dependencies
+  |
+  v
+Read GitHub credentials from environment
+  |
+  v
+Build GitHub API endpoint
+  |
+  v
+Send request using curl
+  |
+  v
+Receive JSON response
+  |
+  v
+Filter response using jq
+  |
+  v
+Print users and permissions
+  |
+  v
+End
+```
+
+---
+
+## 43. Final Summary
+
+This project teaches how to automate GitHub repository access checks using Bash and the GitHub REST API.
+
+The key lessons are:
+
+- APIs allow programmatic interaction with applications.
+- GitHub provides documented REST endpoints.
+- `curl` sends HTTP requests from the terminal.
+- GitHub tokens authenticate API requests.
+- Environment variables prevent credentials from being hardcoded.
+- Command-line arguments make scripts reusable.
+- Functions organize shell-script logic.
+- JSON is the common API response format.
+- `jq` extracts and filters JSON data.
+- Permissions determine what information can be accessed.
+- Error handling is necessary for reliable automation.
+- Security is essential when handling tokens and access reports.
+- The script can be extended to process hundreds or thousands of repositories.
+
+This is a practical example of how DevOps engineers use automation to replace repetitive manual tasks with repeatable, scalable workflows.
